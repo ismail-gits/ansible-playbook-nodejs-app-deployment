@@ -1,0 +1,5 @@
+node_app_dir: /home/ismail/ansible-projects/ansible-node-app-deployment/node-js-application
+node_app_version: 1.0.0
+user_home_dir: /home/nodejs
+user: nodejs
+hosts: webserver

@@ -1,0 +1,59 @@
+---
+- name: Install node and npm
+  hosts: "{{ hosts }}"
+  vars_files:
+    - deploy-node-vars.yaml
+  tasks:
+    - name: Update apt repo and cache
+      apt:
+        update_cache: true
+        force_apt_get: true
+        cache_valid_time: 3600
+
+    - name: Install nodejs and npm
+      apt:
+        pkg:
+          - nodejs
+          - npm
+
+- name: Create new linux user for node app
+  hosts: "{{ hosts }}"
+  vars_files:
+    - deploy-node-vars.yaml
+  tasks: 
+    - name: Create linux user
+      user:
+        name: "{{ user }}"
+        comment: "{{ user }} user is responsible for deploying and starting the nodejs application"
+      register: user_creation_result
+    - debug:
+        msg: "{{ user_creation_result }}"
+
+- name: Deploy nodejs application
+  hosts: "{{ hosts }}"
+  become: true
+  become_user: "{{ user }}"
+  vars_files:
+    - deploy-node-vars.yaml
+  tasks:
+    - name: Unpack the nodejs tgz file
+      unarchive:
+        src: "{{ node_app_dir }}/node-js-app-{{ node_app_version }}.tgz"
+        dest: "{{ user_home_dir }}"
+
+    - name: Install dependencies using npm
+      npm:
+        path: "{{ user_home_dir }}/package"
+
+    - name: Start the nodejs application
+      command:
+        chdir: "{{ user_home_dir }}/package/app"
+        cmd: node server.js
+      async: 1000
+      poll: 0
+
+    - name: Ensure app is running
+      shell: ps aux | grep node
+      register: app_status
+    - debug:
+        msg: "{{ app_status.stdout_lines }}"
